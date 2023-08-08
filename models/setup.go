@@ -17,5 +17,17 @@ func ConnectDatabase() {
 	// Migrate the schema
 	database.AutoMigrate(&Product{})
 
+	p := Product{}
+	database.First(&p)
+
+	if p.ID == 0 {
+		database.Create([]Product{
+			{Code: "sample1", Price: 10},
+			{Code: "sample2", Price: 20},
+			{Code: "sample3", Price: 30},
+			{Code: "sample4", Price: 40},			
+		})
+	}
+
 	DB = database
 }
