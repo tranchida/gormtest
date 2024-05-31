@@ -26,6 +26,7 @@ func ConnectDatabase() {
 			{Code: "sample2", Price: 20},
 			{Code: "sample3", Price: 30},
 			{Code: "sample4", Price: 40},
+			{Code: "sample5", Price: 50},
 		})
 	}
 
