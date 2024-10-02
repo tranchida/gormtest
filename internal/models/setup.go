@@ -1,6 +1,10 @@
 package models
 
 import (
+	"log"
+	"math/rand"
+	"os"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -20,13 +24,18 @@ func ConnectDatabase() {
 	p := Product{}
 	database.First(&p)
 
+	file, err := os.ReadFile("sample.jpg")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if p.ID == 0 {
 		database.Create([]Product{
-			{Code: "sample1", Price: 10},
-			{Code: "sample2", Price: 20},
-			{Code: "sample3", Price: 30},
-			{Code: "sample4", Price: 40},
-			{Code: "sample5", Price: 50},
+			{Code: "sample1", Price: 10, Stock: uint(rand.Intn(100)), Image: file},
+			{Code: "sample2", Price: 20, Stock: uint(rand.Intn(100)), Image: file},
+			{Code: "sample3", Price: 30, Stock: uint(rand.Intn(100)), Image: file},
+			{Code: "sample4", Price: 40, Stock: uint(rand.Intn(100)), Image: file},
+			{Code: "sample5", Price: 50, Stock: uint(rand.Intn(100)), Image: file},
 		})
 	}
 

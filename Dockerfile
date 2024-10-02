@@ -1,24 +1,13 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.22.3
+FROM debian:stable-slim
 
 # Set destination for COPY
 WORKDIR /app
 
 # Download Go modules
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy the source code. Note the slash at the end, as explained in
-# https://docs.docker.com/reference/dockerfile/#copy
-COPY *.go ./
-COPY controlers/*.go controlers/
-COPY models/*.go models/
-COPY services/*.go services/
-
-
-# Build
-RUN go build -o /gormtest
+COPY bin/gormtest .
+COPY sample.jpg .
 
 # Optional:
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
@@ -27,5 +16,6 @@ RUN go build -o /gormtest
 # https://docs.docker.com/reference/dockerfile/#expose
 EXPOSE 8080
 
+ENV GIN_MODE=release
 # Run
-CMD ["/gormtest"]
+CMD ["./gormtest"]
