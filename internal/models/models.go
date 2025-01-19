@@ -12,7 +12,7 @@ type Livre struct {
 
 type Recette struct {
 	gorm.Model
-	Nom    string `json:"node" gorm:"size:150"`
+	Nom    string `json:"nom" gorm:"size:150"`
 	Niveau uint   `json:"niveau"`
 	Temps  uint   `json:"temps"`
 }
