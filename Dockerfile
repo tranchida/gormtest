@@ -1,21 +1,22 @@
 # syntax=docker/dockerfile:1
 
-FROM debian:stable-slim
+FROM docker.io/golang:1.23.4-alpine AS build
 
-# Set destination for COPY
-WORKDIR /app
+WORKDIR /build
 
-# Download Go modules
-COPY bin/gormtest .
-COPY sample.jpg .
+COPY . .
 
-# Optional:
-# To bind to a TCP port, runtime parameters must be supplied to the docker command.
-# But we can document in the Dockerfile what ports
-# the application is going to listen on by default.
-# https://docs.docker.com/reference/dockerfile/#expose
+RUN go mod download
+
+RUN go build -o gormtest cmd/gormtest/main.go
+
+FROM docker.io/alpine:3.14 AS runtime
+
+ENV TZ=Europe/Zurich
+RUN apk --no-cache add tzdata
+
+COPY --from=build /build/gormtest /app/gormtest
+
 EXPOSE 8080
 
-ENV GIN_MODE=release
-# Run
-CMD ["./gormtest"]
+CMD ["/app/gormtest"]

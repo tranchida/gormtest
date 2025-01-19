@@ -1,0 +1,8 @@
+
+GET http://localhost:8080/recettes HTTP/1.1
+Accept: application/json
+
+###
+
+GET http://localhost:8080/livres HTTP/1.1
+Accept: application/json
