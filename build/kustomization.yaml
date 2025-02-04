@@ -8,4 +8,4 @@ resources:
 secretGenerator:
   - name: gormtest-secret
     literals:
-      - postgresql-url=postgres://gouser:password@postgres:5432/mydb?sslmode=disable
+      - postgresql-url=postgres://postgres:postgresSuperUserPsw@mypostgres:5432/postgres?sslmode=disable

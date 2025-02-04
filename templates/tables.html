@@ -1,0 +1,35 @@
+{{ define "livresTable" }}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Titre</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ range .data }}
+        <tr>
+            <td>{{ .Titre }}</td>
+        </tr>
+        {{ end }}
+    </tbody>
+</table>
+{{ end }} {{ define "recettesTable" }}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Niveau</th>
+            <th>Temps</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ range .data }}
+        <tr>
+            <td>{{ .Nom }}</td>
+            <td>{{ .Niveau }}</td>
+            <td>{{ .Temps }}</td>
+        </tr>
+        {{ end }}
+    </tbody>
+</table>
+{{ end }}

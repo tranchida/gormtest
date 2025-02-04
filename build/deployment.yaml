@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: gormtest
-        image: tranchida/gormtest:latest
+        image: docker.io/tranchida/gormtest:latest
         env:
         - name: TZ
           value: Europe/Zurich
