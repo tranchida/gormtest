@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"tranchida.github.com/gormtest/internal/models"
@@ -31,7 +31,7 @@ func createNewServer() (*server, error) {
 		url = "postgres://gouser:password@localhost:5432/mydb?sslmode=disable"
 	}
 
-	database, err := gorm.Open(postgres.Open(url), &gorm.Config{
+	database, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
