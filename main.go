@@ -1,47 +1,121 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"tranchida.github.com/gormtest/internal/models"
 )
 
+type appConfig struct {
+	port        string
+	sqlitePath  string
+	seedEnabled bool
+}
+
 func main() {
 
-	s, err := createNewServer()
+	config, err := loadConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	if err = s.engine.Run(); err != nil {
+	s, err := createNewServer(config)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = s.engine.Run(":" + config.port); err != nil {
 		panic(err)
 	}
 
 }
 
-func createNewServer() (*server, error) {
+func loadConfig() (appConfig, error) {
 
-	var url string
-	if url = os.Getenv("POSTGRESQL_URL"); url == "" {
-		url = "postgres://gouser:password@localhost:5432/mydb?sslmode=disable"
+	if err := loadDotEnv(".env"); err != nil {
+		return appConfig{}, err
 	}
 
-	database, err := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{
+	seedEnabled, err := envBool("SEED_DB", true)
+	if err != nil {
+		return appConfig{}, err
+	}
+
+	return appConfig{
+		port:        envOrDefault("APP_PORT", "8080"),
+		sqlitePath:  envOrDefault("SQLITE_PATH", "gorm.db"),
+		seedEnabled: seedEnabled,
+	}, nil
+}
+
+func loadDotEnv(path string) error {
+
+	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+
+	return godotenv.Load(path)
+}
+
+func envBool(name string, defaultValue bool) (bool, error) {
+
+	value, ok := os.LookupEnv(name)
+	if !ok || value == "" {
+		return defaultValue, nil
+	}
+
+	parsedValue, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("parse %s: %w", name, err)
+	}
+
+	return parsedValue, nil
+}
+
+func envOrDefault(name, defaultValue string) string {
+
+	if value, ok := os.LookupEnv(name); ok && value != "" {
+		return value
+	}
+
+	return defaultValue
+}
+
+func createNewServer(config appConfig) (*server, error) {
+
+	databaseDir := filepath.Dir(config.sqlitePath)
+	if databaseDir != "." {
+		if err := os.MkdirAll(databaseDir, 0o755); err != nil {
+			return nil, err
+		}
+	}
+
+	database, err := gorm.Open(sqlite.Open(config.sqlitePath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	initDB(database)
+	if err = initDB(database, config.seedEnabled); err != nil {
+		return nil, err
+	}
 
 	s := &server{
-		engine: gin.Default(),
+		engine:   gin.Default(),
 		database: database,
 	}
 
@@ -64,43 +138,95 @@ func createNewServer() (*server, error) {
 
 }
 
-func initDB(database *gorm.DB) {
+func initDB(database *gorm.DB, seedEnabled bool) error {
 
-	database.AutoMigrate(&models.Livre{}, &models.Recette{})
+	if err := database.AutoMigrate(&models.Livre{}, &models.Recette{}); err != nil {
+		return err
+	}
 
-	recette := models.Recette{}
-	result := database.First(&recette)
-	if result.RowsAffected == 0 {
+	if !seedEnabled {
+		return nil
+	}
 
-		p1 := models.Recette{
+	return seedDB(database)
+}
+
+func seedDB(database *gorm.DB) error {
+
+	type recetteSeed struct {
+		Nom    string
+		Niveau uint
+		Temps  uint
+	}
+
+	recettesSeed := []recetteSeed{
+		{
 			Nom:    "Poulet au curry",
 			Niveau: 2,
 			Temps:  30,
-		}
-
-		p2 := models.Recette{
+		},
+		{
 			Nom:    "Poulet au citron",
 			Niveau: 1,
 			Temps:  20,
-		}
-
-		l := models.Livre{
-			Titre: "Recettes du poulet",
-			Recettes: []models.Recette{
-				p1,
-				p2,
-			},
-		}
-
-		database.Create(&l)
-
-		database.Save(&l)
-
+		},
 	}
+
+	return database.Transaction(func(tx *gorm.DB) error {
+		recettes := make([]models.Recette, 0, len(recettesSeed))
+
+		for _, recetteSeed := range recettesSeed {
+			recette := models.Recette{}
+			err := tx.Where("nom = ?", recetteSeed.Nom).First(&recette).Error
+			if err != nil {
+				if !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				}
+
+				recette = models.Recette{
+					Nom:    recetteSeed.Nom,
+					Niveau: recetteSeed.Niveau,
+					Temps:  recetteSeed.Temps,
+				}
+				if err := tx.Create(&recette).Error; err != nil {
+					return err
+				}
+			} else {
+				recette.Niveau = recetteSeed.Niveau
+				recette.Temps = recetteSeed.Temps
+				if err := tx.Save(&recette).Error; err != nil {
+					return err
+				}
+			}
+
+			recettes = append(recettes, recette)
+		}
+
+		livre := models.Livre{}
+		err := tx.Where("titre = ?", "Recettes du poulet").First(&livre).Error
+		if err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+
+			livre = models.Livre{
+				Titre: "Recettes du poulet",
+			}
+			if err := tx.Create(&livre).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Model(&livre).Association("Recettes").Replace(recettes); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 type server struct {
-	engine 	  *gin.Engine
+	engine   *gin.Engine
 	database *gorm.DB
 }
 

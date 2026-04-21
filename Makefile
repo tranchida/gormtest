@@ -2,10 +2,15 @@ hello:
 	@echo "Hello"
 
 build:
-	@go build -o bin/gormtest cmd/gormtest/main.go
-	podman build -t localhost/gormtest:${version} .
+	docker compose build
 
 run:
-	podman run --rm -it -p 8080:8080 localhost/gormtest:${version}
+	docker compose up --build
+
+local-build:
+	@go build -o bin/gormtest .
+
+down:
+	docker compose down
 
 all: hello build run

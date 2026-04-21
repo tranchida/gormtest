@@ -1,0 +1,14 @@
+services:
+  gormtest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+    volumes:
+      - sqlite-data:/app/data
+
+volumes:
+  sqlite-data:
