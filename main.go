@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"tranchida.github.com/gormtest/internal/models"
